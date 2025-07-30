@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>锦标赛任务分析（全员统计版）</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .input-section { background: #f0f8ff; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .analysis { background: #f9f9f9; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        .combination { margin: 5px 0; padding: 5px; background: white; border-left: 3px solid #4CAF50; }
+        .probable { font-weight: bold; color: #2E7D32; }
+        .low-score { color: #d32f2f; }
+        button { background-color: #4CAF50; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #45a049; }
+        input { padding: 6px; margin: 5px 0; }
+        .tab { overflow: hidden; border: 1px solid #ccc; background-color: #f1f1f1; }
+        .tab button { background-color: inherit; float: left; border: none; outline: none; cursor: pointer; padding: 10px 16px; transition: 0.3s; color: black; }
+        .tab button:hover { background-color: #ddd; }
+        .tab button.active { background-color: #4CAF50; color: white; }
+        .tabcontent { display: none; padding: 15px; border: 1px solid #ccc; border-top: none; }
+        .player-list { margin-bottom: 15px; }
+        
+        .login-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        .app-content {
+            display: none;
+        }
+        input[type="password"] {
+            padding: 10px;
+            margin: 10px 0;
+            width: 80%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .hint {
+            font-size: 14px;
+            color: #666;
+            margin-top: 15px;
+        }
+        .danger-btn {
+            background-color: #f44336;
+            margin-left: 10px;
+        }
+        .export-import {
+            margin-top: 15px;
+            padding: 10px;
+            background: #fff3e0;
+            border-radius: 5px;
+        }
+		.missing-points {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div id="loginContainer" class="login-container">
+    <h2>锦标赛分析工具</h2>
+    <p>请输入今日访问密码</p>
+    <input type="password" id="passwordInput" placeholder="输入密码">
+    <button onclick="checkPassword()">进入工具</button>
+    <div id="errorMsg" class="error"></div>
+</div>
+<div id="appContent" class="app-content">
+    <h1>锦标赛任务分析</h1>
+    
+    <div class="input-section">
+        <h3>记录新分数</h3>
+        <div>
+            <label>对手名称: 
+                <input type="text" id="playerName" placeholder="输入对手名称">
+            </label>
+        </div>
+        <div>
+            <label>当前总分: 
+                <input type="number" id="currentScore" placeholder="输入当前总分">
+            </label>
+        </div>
+        <button onclick="recordScore()">记录分数</button>
+        <button onclick="clearCache()" class="danger-btn">清除所有数据</button>
+        
+        <div class="export-import">
+            <h4>数据备份与恢复</h4>
+            <button onclick="exportData()">导出数据</button>
+            <button onclick="importData()">导入数据</button>
+            <input type="file" id="fileInput" style="display: none;" accept=".json">
+        </div>
+    </div>
+    
+    <div class="tab">
+        <button class="tablinks active" onclick="openTab(event, 'scoreTable')">分数记录</button>
+        <button class="tablinks" onclick="openTab(event, 'playerStats')">个人统计</button>
+        <button class="tablinks" onclick="openTab(event, 'globalStats')">全员统计</button>
+    </div>
+    
+    <div id="scoreTable" class="tabcontent" style="display: block;">
+        <h3>分数记录表</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>对手</th>
+                    <th>总分</th>
+                    <th>差值</th>
+                    <th>任务组合</th>
+                    <th>任务数</th>
+					 <th>缺分</th>
+					
+                </tr>
+            </thead>
+            <tbody id="scoreTableBody"></tbody>
+        </table>
+    </div>
+    
+    <div id="playerStats" class="tabcontent">
+        <div class="player-list">
+            <label>选择玩家: 
+                <select id="playerSelect" onchange="updatePlayerAnalysis()"></select>
+            </label>
+        </div>
+        <div class="analysis">
+            <h3>个人任务统计分析</h3>
+            <div id="playerTaskStats"></div>
+            <div id="playerSummary"></div>
+            <div id="playerCombinations"></div>
+        </div>
+    </div>
+    
+    <div id="globalStats" class="tabcontent">
+        <div class="analysis">
+            <h3>全员任务统计分析</h3>
+            <div id="globalTaskStats"></div>
+            <div id="globalSummary"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 生成今日密码
+    function generateTodayPassword() {
+        const today = new Date();
+        const day = String(today.getDate()+7).padStart(2, '0');
+        const month = String(today.getMonth() + 1+17).padStart(2, '0');
+        return day + month; // 格式为DDMM
+    }
+
+    // 检查密码
+    function checkPassword() {
+        const correctPassword = generateTodayPassword();
+        const enteredPassword = document.getElementById('passwordInput').value;
+        const errorMsg = document.getElementById('errorMsg');
+        
+        if (enteredPassword === correctPassword) {
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('appContent').style.display = 'block';
+            loadRecords(); // 加载保存的记录
+            updateDisplay();
+        } else {
+            errorMsg.textContent = '密码错误，请重试';
+        }
+    }
+
+    // 标准任务分数（按优先级排序）
+    const STANDARD_TASKS = [400, 300, 285,280, 270,260,250];
+    let records = [];
+    
+    // 加载保存的记录
+    function loadRecords() {
+        const savedRecords = localStorage.getItem('tournamentRecords');
+        if (savedRecords) {
+            try {
+                records = JSON.parse(savedRecords);
+                console.log('成功加载保存的记录');
+            } catch (e) {
+                console.error('解析保存的记录时出错:', e);
+            }
+        }
+    }
+    
+    // 保存记录到本地存储
+    function saveRecords() {
+        localStorage.setItem('tournamentRecords', JSON.stringify(records));
+    }
+    
+    // 清除所有记录
+    function clearCache() {
+        if (confirm("确定要清除所有记录数据吗？此操作不可撤销！")) {
+            records = [];
+            localStorage.removeItem('tournamentRecords');
+            updateDisplay();
+            alert('所有数据已清除');
+        }
+    }
+    
+    // 导出数据为JSON文件
+    function exportData() {
+        const dataStr = JSON.stringify(records, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        
+        const exportFileDefaultName = '锦标赛数据_' + new Date().toISOString().slice(0, 10) + '.json';
+        
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+    }
+    
+    // 导入数据
+    function importData() {
+        document.getElementById('fileInput').click();
+    }
+    
+    // 设置文件输入事件监听
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedRecords = JSON.parse(e.target.result);
+                if (Array.isArray(importedRecords)) {
+                    if (confirm(`确定要导入 ${importedRecords.length} 条记录吗？这将覆盖当前数据！`)) {
+                        records = importedRecords;
+                        saveRecords();
+                        updateDisplay();
+                        alert('数据导入成功！');
+                    }
+                } else {
+                    alert('导入的文件格式不正确！');
+                }
+            } catch (error) {
+                alert('解析文件时出错: ' + error.message);
+            }
+        };
+        reader.readAsText(file);
+    });
+    
+    // 记录新分数
+    function recordScore() {
+        const name = document.getElementById('playerName').value.trim();
+        const score = parseInt(document.getElementById('currentScore').value);
+        
+        if (!name || isNaN(score)) {
+            alert("请输入有效的对手名称和分数");
+            return;
+        }
+        
+        const now = new Date();
+        let delta = 0;
+        let combinations = [];
+        
+        // 查找该玩家上次记录
+        const playerRecords = records.filter(r => r.player === name);
+        if (playerRecords.length > 0) {
+            const lastRecord = playerRecords[playerRecords.length-1];
+            delta = score - lastRecord.score;
+            combinations = findBestCombinations(delta);
+        } else {
+            // 第一次记录，尝试分解总分
+            combinations = findBestCombinations(score);
+        }
+        
+        // 保存记录
+        records.push({
+            time: now.toLocaleTimeString(),
+            player: name,
+            score: score,
+            delta: delta,
+            combinations: combinations,
+            bestCombo: combinations[0] || []
+        });
+        
+        saveRecords(); // 保存到本地存储
+        updateDisplay();
+    }
+    
+    // 寻找最佳任务组合（优先使用标准分数）
+    function findBestCombinations(delta) {
+        if (delta <= 0) return [];
+        
+        let allCombinations = [];
+        
+        // 先尝试只用标准分数组合
+        findStandardCombinations(delta, [], 0, allCombinations);
+        
+        // 如果找不到完全匹配的标准组合，则尝试用低分任务补足
+        if (allCombinations.length === 0) {
+            findCombinationsWithLowScore(delta, allCombinations);
+        }
+        
+        // 排序组合：1. 使用标准分数的优先 2. 任务数少的优先 3. 高分任务多的优先
+        allCombinations.sort((a, b) => {
+            // 优先使用全标准分数的组合
+            if (a.hasLowScore !== b.hasLowScore) {
+                return a.hasLowScore ? 1 : -1;
+            }
+            // 然后按任务数排序
+            if (a.tasks.length !== b.tasks.length) {
+                return a.tasks.length - b.tasks.length;
+            }
+            // 最后按总分排序（高分任务优先）
+            return b.total - a.total;
+        });
+        
+        return allCombinations.map(combo => combo.tasks);
+    }
+    
+    // 只使用标准分数寻找组合
+    function findStandardCombinations(remaining, currentCombo, startIdx, results) {
+        if (remaining === 0) {
+            results.push({
+                tasks: [...currentCombo],
+                total: sum(currentCombo),
+                hasLowScore: false
+            });
+            return;
+        }
+        
+        // 限制最多5个任务的组合（合理假设）
+        if (currentCombo.length >= 5) return;
+        
+        for (let i = startIdx; i < STANDARD_TASKS.length; i++) {
+            const task = STANDARD_TASKS[i];
+            if (task <= remaining) {
+                currentCombo.push(task);
+                findStandardCombinations(remaining - task, currentCombo, i, results);
+                currentCombo.pop();
+            }
+        }
+    }
+    
+    // 使用标准分数+低分任务寻找组合
+    function findCombinationsWithLowScore(delta, results) {
+        // 先尝试用标准任务组合，剩余部分用低分任务补足
+        for (let i = 1; i <= 5; i++) { // 尝试1-5个标准任务
+            const standardCombos = [];
+            findStandardCombinations(delta, [], 0, standardCombos, i);
+            
+            for (const combo of standardCombos) {
+                if (combo.tasks.length === i) {
+                    const remaining = delta - combo.total;
+                    if (remaining > 0) {
+                        // 添加低分任务补足
+                        results.push({
+                            tasks: [...combo.tasks, remaining],
+                            total: delta,
+                            hasLowScore: true
+                        });
+                    }
+                }
+            }
+        }
+    }
+    
+    function sum(arr) {
+        return arr.reduce((a, b) => a + b, 0);
+    }
+    
+    // 更新显示
+    function updateDisplay() {
+        updateScoreTable();
+        updatePlayerSelect();
+        updatePlayerAnalysis();
+        updateGlobalStats();
+    }
+    
+    // 更新分数表格
+    function updateScoreTable() {
+        const tbody = document.querySelector('#scoreTableBody');
+        tbody.innerHTML = '';
+        
+		let totalMissingPoints = 0;
+        records.forEach(record => {
+            const row = document.createElement('tr');
+            
+            // 显示最佳组合
+            let comboDisplay = "";
+            let hasLowScore = false;
+            const missingPoints = calculateMissingPoints(record.bestCombo);
+            totalMissingPoints += missingPoints;
+            if (record.bestCombo.length > 0) {
+                comboDisplay = record.bestCombo.map(task => {
+                    if (STANDARD_TASKS.includes(task)) {
+                        return task;
+                    } else {
+                        hasLowScore = true;
+                        return `<span class="low-score">${task}</span>`;
+                    }
+                }).join(" + ");
+            } else {
+                comboDisplay = "-";
+            }
+            
+            row.innerHTML = `
+                <td>${record.time}</td>
+                <td>${record.player}</td>
+                <td>${record.score}</td>
+                <td>${record.delta || '-'}</td>
+                <td>${comboDisplay}</td>
+                <td>${record.bestCombo.length || '0'}</td>
+				<td class="${missingPoints > 0 ? 'missing-points' : ''}">${missingPoints || '0'}</td>
+
+            `;
+            tbody.appendChild(row);
+        });
+		
+		 // 添加总计行
+        const totalRow = document.createElement('tr');
+        totalRow.className = 'total-row';
+        totalRow.innerHTML = `
+            <td colspan="6" style="text-align: right;">总计缺分:</td>
+            <td class="${totalMissingPoints > 0 ? 'missing-points' : ''}">${totalMissingPoints}</td>
+        `;
+        tbody.appendChild(totalRow);
+    }
+    
+    // 更新玩家选择下拉框
+    function updatePlayerSelect() {
+        const select = document.getElementById('playerSelect');
+        select.innerHTML = '';
+        
+        // 获取所有独特玩家名称
+        const players = [...new Set(records.map(r => r.player))];
+        
+        if (players.length === 0) {
+            select.innerHTML = '<option value="">无记录数据</option>';
+            return;
+        }
+        
+        players.forEach(player => {
+            const option = document.createElement('option');
+            option.value = player;
+            option.textContent = player;
+            select.appendChild(option);
+        });
+    }
+    
+    // 更新玩家分析
+    function updatePlayerAnalysis() {
+        const playerSelect = document.getElementById('playerSelect');
+        const currentPlayer = playerSelect.value;
+        const playerRecords = records.filter(r => r.player === currentPlayer);
+        
+        if (!currentPlayer || playerRecords.length === 0) {
+            document.getElementById('playerTaskStats').innerHTML = "<p>请选择玩家</p>";
+            document.getElementById('playerSummary').innerHTML = "";
+            document.getElementById('playerCombinations').innerHTML = "";
+            return;
+        }
+        
+        // 统计各分值任务出现次数
+        const taskStats = {};
+        let totalTasks = 0;
+        let totalStandardTasks = 0;
+        let totalLowScoreTasks = 0;
+        
+        playerRecords.forEach(record => {
+            record.bestCombo.forEach(task => {
+                if (STANDARD_TASKS.includes(task)) {
+                    taskStats[task] = (taskStats[task] || 0) + 1;
+                    totalStandardTasks++;
+                } else {
+                    taskStats['<270'] = (taskStats['<270'] || 0) + 1;
+                    totalLowScoreTasks++;
+                }
+                totalTasks++;
+            });
+        });
+        
+        // 显示任务统计
+        let statsHTML = "<h4>任务统计:</h4><table><tr><th>任务类型</th><th>次数</th><th>占比</th></tr>";
+        
+        // 按标准分数顺序显示
+        STANDARD_TASKS.forEach(task => {
+            if (taskStats[task]) {
+                const percentage = ((taskStats[task] / totalTasks) * 100).toFixed(1);
+                statsHTML += `<tr><td>${task}分任务</td><td>${taskStats[task]}</td><td>${percentage}%</td></tr>`;
+            }
+        });
+        
+        // 显示低分任务
+        if (taskStats['<270']) {
+            const percentage = ((taskStats['<270'] / totalTasks) * 100).toFixed(1);
+            statsHTML += `<tr><td class="low-score"><270分任务</td><td class="low-score">${taskStats['<270']}</td><td class="low-score">${percentage}%</td></tr>`;
+        }
+        
+        statsHTML += `<tr><th>总计</th><th>${totalTasks}</th><th>100%</th></tr>`;
+        statsHTML += "</table>";
+        document.getElementById('playerTaskStats').innerHTML = statsHTML;
+        
+        // 显示汇总信息
+        let summaryHTML = "<h4>分析摘要:</h4><ul>";
+        
+        summaryHTML += `<li>总任务数: <strong>${totalTasks}</strong>个</li>`;
+        summaryHTML += `<li>标准任务: <strong>${totalStandardTasks}</strong>个</li>`;
+        
+        if (totalLowScoreTasks > 0) {
+            summaryHTML += `<li class="low-score">低分任务: <strong>${totalLowScoreTasks}</strong>个</li>`;
+        }
+        
+        // 检测钻石任务
+        if (taskStats[400]) {
+            summaryHTML += `<li style="color:red;">检测到钻石任务(400分): <strong>${taskStats[400]}</strong>次</li>`;
+        }
+        
+        // 计算平均每任务得分
+        const lastRecord = playerRecords[playerRecords.length-1];
+        const avgScore = (lastRecord.score / totalTasks).toFixed(1);
+        summaryHTML += `<li>平均每任务得分: <strong>${avgScore}</strong>分</li>`;
+        
+        summaryHTML += "</ul>";
+        document.getElementById('playerSummary').innerHTML = summaryHTML;
+        
+        // 显示最近一次的所有可能组合
+        const lastDeltaRecord = playerRecords[playerRecords.length-1];
+        if (lastDeltaRecord.delta > 0 && lastDeltaRecord.combinations.length > 1) {
+            let comboHTML = "<h4>其他可能的组合:</h4><div class='combinations'>";
+            
+            lastDeltaRecord.combinations.slice(1).forEach(combo => {
+                const hasLow = combo.some(t => !STANDARD_TASKS.includes(t));
+                comboHTML += `<div class="combination ${hasLow ? 'low-score' : ''}">`;
+                comboHTML += combo.map(t => STANDARD_TASKS.includes(t) ? t : `<span class="low-score">${t}</span>`).join(" + ");
+                comboHTML += ` (${combo.length}个任务)</div>`;
+            });
+            
+            comboHTML += "</div>";
+            document.getElementById('playerCombinations').innerHTML = comboHTML;
+        } else {
+            document.getElementById('playerCombinations').innerHTML = "";
+        }
+    }
+    
+    // 更新全员统计
+    function updateGlobalStats() {
+        // 统计所有玩家的任务数据
+        const globalTaskStats = {};
+        let globalTotalTasks = 0;
+        let globalTotalStandardTasks = 0;
+        let globalTotalLowScoreTasks = 0;
+        let globalTotalPlayers = 0;
+        let globalTotalDiamondTasks = 0;
+        
+        // 获取所有独特玩家
+        const players = [...new Set(records.map(r => r.player))];
+        globalTotalPlayers = players.length;
+        
+        // 统计所有任务
+        records.forEach(record => {
+            record.bestCombo.forEach(task => {
+                if (STANDARD_TASKS.includes(task)) {
+                    globalTaskStats[task] = (globalTaskStats[task] || 0) + 1;
+                    globalTotalStandardTasks++;
+                    if (task === 400) globalTotalDiamondTasks++;
+                } else {
+                    globalTaskStats['<270'] = (globalTaskStats['<270'] || 0) + 1;
+                    globalTotalLowScoreTasks++;
+                }
+                globalTotalTasks++;
+            });
+        });
+        
+        // 显示全员任务统计
+        let statsHTML = "<h4>全员任务统计:</h4><table><tr><th>任务类型</th><th>次数</th><th>占比</th><th>平均每人</th></tr>";
+        
+        // 按标准分数顺序显示
+        STANDARD_TASKS.forEach(task => {
+            if (globalTaskStats[task]) {
+                const percentage = ((globalTaskStats[task] / globalTotalTasks) * 100).toFixed(1);
+                const perPlayer = (globalTaskStats[task] / globalTotalPlayers).toFixed(1);
+                statsHTML += `<tr><td>${task}分任务</td><td>${globalTaskStats[task]}</td><td>${percentage}%</td><td>${perPlayer}</td></tr>`;
+            }
+        });
+        
+        // 显示低分任务
+        if (globalTaskStats['<270']) {
+            const percentage = ((globalTaskStats['<270'] / globalTotalTasks) * 100).toFixed(1);
+            const perPlayer = (globalTaskStats['<270'] / globalTotalPlayers).toFixed(1);
+            statsHTML += `<tr><td class="low-score"><270分任务</td><td class="low-score">${globalTaskStats['<270']}</td><td class="low-score">${percentage}%</td><td class="low-score">${perPlayer}</td></tr>`;
+        }
+        
+        statsHTML += `<tr><th>总计</th><th>${globalTotalTasks}</th><th>100%</th><th>${(globalTotalTasks/globalTotalPlayers).toFixed(1)}</th></tr>`;
+        statsHTML += "</table>";
+        document.getElementById('globalTaskStats').innerHTML = statsHTML;
+        
+        // 显示全员汇总信息
+        let summaryHTML = "<h4>全员分析摘要:</h4><ul>";
+        
+        summaryHTML += `<li>总玩家数: <strong>${globalTotalPlayers}</strong>人</li>`;
+        summaryHTML += `<li>总任务数: <strong>${globalTotalTasks}</strong>个</li>`;
+        summaryHTML += `<li>平均每人任务数: <strong>${(globalTotalTasks/globalTotalPlayers).toFixed(1)}</strong>个</li>`;
+        summaryHTML += `<li>标准任务总数: <strong>${globalTotalStandardTasks}</strong>个</li>`;
+        
+        if (globalTotalLowScoreTasks > 0) {
+            summaryHTML += `<li class="low-score">低分任务总数: <strong>${globalTotalLowScoreTasks}</strong>个</li>`;
+        }
+        
+        if (globalTotalDiamondTasks > 0) {
+            summaryHTML += `<li style="color:red;">钻石任务总数(400分): <strong>${globalTotalDiamondTasks}</strong>次</li>`;
+            summaryHTML += `<li>使用钻石任务的玩家比例: <strong>${((records.filter(r => r.bestCombo.includes(400)).length / globalTotalPlayers)*100).toFixed(1)}%</strong></li>`;
+        }
+        
+        // 计算平均每任务得分
+        let totalScore = 0;
+        players.forEach(player => {
+            const playerRecords = records.filter(r => r.player === player);
+            if (playerRecords.length > 0) {
+                totalScore += playerRecords[playerRecords.length-1].score;
+            }
+        });
+        
+        const avgScore = (totalScore / globalTotalTasks).toFixed(1);
+        summaryHTML += `<li>全员平均每任务得分: <strong>${avgScore}</strong>分</li>`;
+        
+        summaryHTML += "</ul>";
+        document.getElementById('globalSummary').innerHTML = summaryHTML;
+    }
+    
+    // 标签页切换
+    function openTab(evt, tabName) {
+        const tabcontent = document.getElementsByClassName("tabcontent");
+        for (let i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        
+        const tablinks = document.getElementsByClassName("tablinks");
+        for (let i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+	
+	 function calculateMissingPoints(tasks) {
+        if (!tasks || tasks.length === 0) return 0;
+        
+        let missing = 0;
+        tasks.forEach(task => {
+            if (task === 400 || task === 300) {
+                // 400和300分任务不缺分
+                return;
+            } else {
+                missing += (300 - task); // 250-269分任务缺(270-task)分
+            }
+            // 其他情况(低分任务)不计入缺分
+        });
+        return missing;
+    }
+</script>
+</body>
+</html>
